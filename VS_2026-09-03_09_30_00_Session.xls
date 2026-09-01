@@ -1,0 +1,219 @@
+			<tr>
+			<td style="float:center;font-size: 20px;"> 
+				<b> V S M  S INSTITUTE OF TECHNOLOGY  </b>
+			</td>  
+		</tr>
+		<br/>
+		<tr>	  
+			<td style="text-align:left"> 
+				<b> CollegeCode - VS					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  Date - 2026-09-03 
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 
+				&nbsp; Session - 09:30:00 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Count - 24 </b>
+			</td> 
+		</tr>	
+		<br/>	
+		<br/>
+		<table class="table" border="1" >
+			<tr>
+				<th>S No</th>
+				<th>USN</th>
+				<th>Student Name</th>
+				<th>Subject Code</th>
+				<th>Subject Name</th>
+				<th>Semester</th>
+			</tr>
+							<tr style="height:25px">
+					<td style="text-align:center">1</td>
+					<td class="noborder" style="text-align:center">2VS23CV001</td>		
+					<td class="noborder" style="text-align:center">ANAND IRAPPA PUJARI</td>
+					<td class="noborder" style="text-align:center">BMATC201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for Civil Engg stream</td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">2</td>
+					<td class="noborder" style="text-align:center">2VS23CV005</td>		
+					<td class="noborder" style="text-align:center">NITIKA SANJAY MADHALE</td>
+					<td class="noborder" style="text-align:center">BMATC201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for Civil Engg stream</td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">3</td>
+					<td class="noborder" style="text-align:center">2VS24CV003</td>		
+					<td class="noborder" style="text-align:center">PANKAJ LAXMAN SANKAPAL</td>
+					<td class="noborder" style="text-align:center">BMATC201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for Civil Engg stream</td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">4</td>
+					<td class="noborder" style="text-align:center">2VS23EC018</td>		
+					<td class="noborder" style="text-align:center">NAMRUTHA JAGTAP</td>
+					<td class="noborder" style="text-align:center">BMATE201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for EEE Stream</td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">5</td>
+					<td class="noborder" style="text-align:center">2VS24EC008</td>		
+					<td class="noborder" style="text-align:center">ANKITA GHODAGERI</td>
+					<td class="noborder" style="text-align:center">BMATE201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for EEE Stream</td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">6</td>
+					<td class="noborder" style="text-align:center">2VS24ME001</td>		
+					<td class="noborder" style="text-align:center">ADINATH AMOL DHARANAGUTTE</td>
+					<td class="noborder" style="text-align:center">BMATM201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for ME Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">7</td>
+					<td class="noborder" style="text-align:center">2VS24ME009</td>		
+					<td class="noborder" style="text-align:center">RAHUL SATISH BHAGADE</td>
+					<td class="noborder" style="text-align:center">BMATM201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for ME Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">8</td>
+					<td class="noborder" style="text-align:center">2VS24ME012</td>		
+					<td class="noborder" style="text-align:center">SOMANATH BALAKRISHNA MANAGUTE</td>
+					<td class="noborder" style="text-align:center">BMATM201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for ME Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">9</td>
+					<td class="noborder" style="text-align:center">2VS23CS003</td>		
+					<td class="noborder" style="text-align:center">ABHISHEK BALAGONDA MAGADUM</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">10</td>
+					<td class="noborder" style="text-align:center">2VS23CS015</td>		
+					<td class="noborder" style="text-align:center">ARPITA SITARAM BHIRADE</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">11</td>
+					<td class="noborder" style="text-align:center">2VS23CS022</td>		
+					<td class="noborder" style="text-align:center">GANESH SHANTAPPA BIRADAR</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">12</td>
+					<td class="noborder" style="text-align:center">2VS23CS083</td>		
+					<td class="noborder" style="text-align:center">SATYAJEET RANMALE</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">13</td>
+					<td class="noborder" style="text-align:center">2VS24CI022</td>		
+					<td class="noborder" style="text-align:center">MISBA MUNEERAHMMAD MOMIN</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">14</td>
+					<td class="noborder" style="text-align:center">2VS24CI030</td>		
+					<td class="noborder" style="text-align:center">PRUTHVIRAJ BALLARI</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">15</td>
+					<td class="noborder" style="text-align:center">2VS24CI031</td>		
+					<td class="noborder" style="text-align:center">RADHIKA KRISHNA GADIWADDAR</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">16</td>
+					<td class="noborder" style="text-align:center">2VS24CI034</td>		
+					<td class="noborder" style="text-align:center">SAKSHI DEEPAK PATIL</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">17</td>
+					<td class="noborder" style="text-align:center">2VS24CI040</td>		
+					<td class="noborder" style="text-align:center">SANTOSH KURANE</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">18</td>
+					<td class="noborder" style="text-align:center">2VS24CS003</td>		
+					<td class="noborder" style="text-align:center">ABHISHEK</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">19</td>
+					<td class="noborder" style="text-align:center">2VS24CS014</td>		
+					<td class="noborder" style="text-align:center">ANKITA RAVINDRAGOUDA PATIL</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">20</td>
+					<td class="noborder" style="text-align:center">2VS24CS045</td>		
+					<td class="noborder" style="text-align:center">MULLA AMAN MEHABOOB</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">21</td>
+					<td class="noborder" style="text-align:center">2VS24CS065</td>		
+					<td class="noborder" style="text-align:center">ROSHANSAGAR</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">22</td>
+					<td class="noborder" style="text-align:center">2VS24CS089</td>		
+					<td class="noborder" style="text-align:center">SHWETA SURESH PATIL</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">23</td>
+					<td class="noborder" style="text-align:center">2VS24CS091</td>		
+					<td class="noborder" style="text-align:center">SIDDU KALLAPPA BELAKUD</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+								<tr style="height:25px">
+					<td style="text-align:center">24</td>
+					<td class="noborder" style="text-align:center">2VS24CS105</td>		
+					<td class="noborder" style="text-align:center">VENKATESH REDDY</td>
+					<td class="noborder" style="text-align:center">BMATS201</td>		
+					<td class="noborder" style="text-align:center">Mathematics-II for CSE Stream </td>		
+					<td class="noborder" style="text-align:center">2</td>		
+				</tr> 
+									
+		</table>
+			

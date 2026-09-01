@@ -1,0 +1,20 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+.env
+.venv
+
+# Generated output directories
+static/downloads/
+Generated_Reports/
+
+# macOS
+.DS_Store
+
+# Misc
+*.log
