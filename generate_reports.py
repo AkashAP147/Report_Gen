@@ -75,12 +75,7 @@ def assign_blocks(df, max_per_block=32, pref_left=None, pref_right=None):
             
             # Fill Odd Desk (Left Column)
             if subj_left not in subject_students:
-                available = [s for s in subject_students.keys() if s != subj_right]
-                if available:
-                    available.sort(key=lambda k: len(subject_students[k]), reverse=True)
-                    subj_left = available[0]
-                else:
-                    subj_left = None
+                subj_left = None
                     
             if subj_left is not None:
                 student = subject_students[subj_left].pop(0)
@@ -93,12 +88,7 @@ def assign_blocks(df, max_per_block=32, pref_left=None, pref_right=None):
                     
             # Fill Even Desk (Right Column)
             if subj_right not in subject_students:
-                available = [s for s in subject_students.keys() if s != subj_left]
-                if available:
-                    available.sort(key=lambda k: len(subject_students[k]), reverse=True)
-                    subj_right = available[0]
-                else:
-                    subj_right = None
+                subj_right = None
                     
             if subj_right is not None:
                 student = subject_students[subj_right].pop(0)
@@ -162,32 +152,199 @@ def create_block_list(data_dict, output_dir):
     date = data_dict['date']
     session = data_dict['session']
     
+    from docx.shared import Inches, Pt, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    import re
+    import os
+    
+    # Format Time
+    if "09:" in session or "10:" in session or "11:" in session or "AM" in session.upper():
+        formatted_time = "09.30am to 12.30pm"
+    else:
+        formatted_time = "02.00pm to 05.00pm"
+        
+    date_parts = date.split('-')
+    if len(date_parts) == 3:
+        formatted_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+    else:
+        formatted_date = date
     
     doc = docx.Document()
     
+    # Set narrow margins
+    section = doc.sections[-1]
+    section.top_margin = Inches(0.5)
+    section.bottom_margin = Inches(0.5)
+    section.left_margin = Inches(0.5)
+    section.right_margin = Inches(0.5)
+    
     for block_no, group in df.groupby('Block No', sort=False):
-        # Header formatting
-        p_top = doc.add_paragraph()
-        p_top.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run_top = p_top.add_run("THEORY EXAMINATIONS JUNE/JULY-2026")
-        run_top.bold = True
-        run_top.underline = True
+        def make_image_float_align(run, align='left'):
+            """Convert an inline image in a run to a floating (anchored) image with alignment."""
+            drawing = run._r.find(qn('w:drawing'))
+            inline = drawing.find(qn('wp:inline'))
+            
+            anchor = OxmlElement('wp:anchor')
+            anchor.set('distT', '0')
+            anchor.set('distB', '0')
+            anchor.set('distL', '114300')
+            anchor.set('distR', '114300')
+            anchor.set('simplePos', '0')
+            anchor.set('relativeHeight', '251658240')
+            anchor.set('behindDoc', '0')
+            anchor.set('locked', '0')
+            anchor.set('layoutInCell', '1')
+            anchor.set('allowOverlap', '1')
+            
+            simplePos = OxmlElement('wp:simplePos')
+            simplePos.set('x', '0')
+            simplePos.set('y', '0')
+            anchor.append(simplePos)
+            
+            posH = OxmlElement('wp:positionH')
+            posH.set('relativeFrom', 'margin')
+            align_node = OxmlElement('wp:align')
+            align_node.text = align # 'left' or 'right'
+            posH.append(align_node)
+            anchor.append(posH)
+            
+            posV = OxmlElement('wp:positionV')
+            posV.set('relativeFrom', 'paragraph')
+            posOffset_v = OxmlElement('wp:posOffset')
+            posOffset_v.text = '0'
+            posV.append(posOffset_v)
+            anchor.append(posV)
+            
+            for child in list(inline):
+                anchor.append(child)
+            
+            wrapNone = OxmlElement('wp:wrapNone')
+            anchor.insert(4, wrapNone)
+            
+            drawing.remove(inline)
+            drawing.append(anchor)
+
+        # Header Title Paragraph
+        p_title = doc.add_paragraph()
+        p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # VSM Logo Left
+        vsm_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vsm_logo.jpg')
+        if os.path.exists(vsm_path):
+            r_vsm = p_title.add_run()
+            r_vsm.add_picture(vsm_path, width=Inches(0.9))
+            make_image_float_align(r_vsm, 'left')
+            
+        # VTU Logo Right
+        vtu_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vtu_logo.png')
+        if os.path.exists(vtu_path):
+            r_vtu = p_title.add_run()
+            r_vtu.add_picture(vtu_path, width=Inches(0.9))
+            make_image_float_align(r_vtu, 'right')
+            
+        # Title Center Text
+        r_title = p_title.add_run("VSM'S S R K INSTITUTE OF TECHNOLOGY\n")
+        r_title.bold = True
+        r_title.font.size = Pt(16)
+        r_sub = p_title.add_run("Nipani - 591 237, Dist: Belgaum, Karnataka State")
+        r_sub.bold = True
+        r_sub.font.size = Pt(10)
+        
+        # Horizontal Line
+        p_line = doc.add_paragraph()
+        pPr = p_line._p.get_or_add_pPr()
+        pBdr = OxmlElement('w:pBdr')
+        bottom = OxmlElement('w:bottom')
+        bottom.set(qn('w:val'), 'single')
+        bottom.set(qn('w:sz'), '12')
+        bottom.set(qn('w:space'), '1')
+        bottom.set(qn('w:color'), 'auto')
+        pBdr.append(bottom)
+        pPr.append(pBdr)
+        
+        # Examination Name
+        p_exam = doc.add_paragraph()
+        p_exam.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r_exam = p_exam.add_run("THEORY EXAMINATIONS JUNE/JULY-2026")
+        r_exam.bold = True
+        r_exam.underline = True
+        r_exam.font.size = Pt(12)
+        
+        # Details section using tab stops
+        from docx.enum.text import WD_TAB_ALIGNMENT
+        p_details = doc.add_paragraph()
+        tab_stops = p_details.paragraph_format.tab_stops
+        tab_stops.add_tab_stop(Inches(1.2), WD_TAB_ALIGNMENT.LEFT)
+        tab_stops.add_tab_stop(Inches(4.5), WD_TAB_ALIGNMENT.LEFT)
+        tab_stops.add_tab_stop(Inches(5.5), WD_TAB_ALIGNMENT.LEFT)
         
         subjects = group['Subject Code'].unique()
         subj_str = ", ".join(map(str, subjects))
         
-        doc.add_paragraph(f"Subject:\nSubject Code: {subj_str} \t\t\t\t Semester:")
-        doc.add_paragraph(f"Date: {date} \t\t\t\t\t Time: {session}")
+        # Try to infer semester
+        sem = ""
+        for subj in subjects:
+            m = re.search(r'[A-Za-z]+(\d)', str(subj))
+            if m:
+                sem = m.group(1)
+                break
         
-        p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.add_run(f"{block_no.upper().replace('-', ' - ')}")
+        subject_names = group['Subject Name'].unique()
+        subj_name_str = ", ".join(map(str, subject_names))
+        
+        r1 = p_details.add_run("Subject:")
+        r1.bold = True
+        p_details.add_run(f"\t{subj_name_str}\n")
+        
+        r2 = p_details.add_run("Subject Code:")
+        r2.bold = True
+        p_details.add_run(f"\t{subj_str}\t")
+        r3 = p_details.add_run("Semester:")
+        r3.bold = True
+        p_details.add_run(f"\t{sem}\n")
+        
+        r4 = p_details.add_run("Date:")
+        r4.bold = True
+        p_details.add_run(f"\t{formatted_date}\t")
+        r5 = p_details.add_run("Time:")
+        r5.bold = True
+        p_details.add_run(f"\t{formatted_time}")
+        
+        # Block Number
+        p_block = doc.add_paragraph()
+        p_block.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p_block.add_run(f"{block_no.upper().replace('-', ' - ')}")
         run.bold = True
         run.underline = True
+        run.font.size = Pt(14)
         
+        # Data Table
         table = doc.add_table(rows=17, cols=4)
         table.style = 'Table Grid'
+        
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+        
+        # Fix table widths
+        tbl_el2 = table._tbl
+        tblPr2 = tbl_el2.tblPr if tbl_el2.tblPr is not None else OxmlElement('w:tblPr')
+        tblLayout2 = OxmlElement('w:tblLayout')
+        tblLayout2.set(qn('w:type'), 'fixed')
+        tblPr2.append(tblLayout2)
+        
+        for r in table.rows:
+            from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+            r.cells[0].width = Inches(2.2)
+            r.cells[0].vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            r.cells[1].width = Inches(1.5)
+            r.cells[1].vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            r.cells[2].width = Inches(2.2)
+            r.cells[2].vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+            r.cells[3].width = Inches(1.5)
+            r.cells[3].vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
         
         hdr_cells = table.rows[0].cells
         for idx, text in enumerate(['USN', 'DESK NO.', 'USN', 'DESK NO.']):
@@ -224,6 +381,14 @@ def create_block_list(data_dict, output_dir):
             if desk_right in desk_to_usn:
                 row.cells[2].text = str(desk_to_usn[desk_right])
                 row.cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Set font size 16 and line spacing 1.5 for all cells in the table
+        for r in table.rows:
+            for c in r.cells:
+                for p in c.paragraphs:
+                    p.paragraph_format.line_spacing = 1.5
+                    for run in p.runs:
+                        run.font.size = Pt(16)
             
         doc.add_page_break()
         
@@ -281,46 +446,147 @@ def create_dispatch_format_i(data_dict, output_dir):
     
     for subject_code, group in df.groupby('Subject Code'):
         
-        # We need a table to place logo on the left and text in the center
-        header_table = doc.add_table(rows=1, cols=2)
-        header_table.columns[0].width = Inches(2.0)
-        header_table.columns[1].width = Inches(7.0)
+        # Helper to remove all borders from a table (make it invisible)
+        def remove_table_borders(tbl):
+            tbl_el = tbl._tbl
+            tblPr = tbl_el.tblPr if tbl_el.tblPr is not None else OxmlElement('w:tblPr')
+            tblBorders = OxmlElement('w:tblBorders')
+            for border_name in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+                border = OxmlElement(f'w:{border_name}')
+                border.set(qn('w:val'), 'none')
+                border.set(qn('w:sz'), '0')
+                border.set(qn('w:space'), '0')
+                border.set(qn('w:color'), 'auto')
+                tblBorders.append(border)
+            tblPr.append(tblBorders)
         
-        # Add Logo
-        cell_left = header_table.cell(0, 0)
-        p_logo = cell_left.paragraphs[0]
-        p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        logo_path = r"d:\COMMERCIAL\DOC_COV\vtu_logo.png"
-        if os.path.exists(logo_path):
-            run_logo = p_logo.add_run()
-            run_logo.add_picture(logo_path, width=Inches(1.0))
+        def disable_autofit(tbl):
+            """Disable auto-fit so explicit column widths are respected."""
+            tbl_el = tbl._tbl
+            tblPr = tbl_el.tblPr if tbl_el.tblPr is not None else OxmlElement('w:tblPr')
+            tblLayout = OxmlElement('w:tblLayout')
+            tblLayout.set(qn('w:type'), 'fixed')
+            tblPr.append(tblLayout)
+        
+        def make_image_float(run, left_emu, top_emu):
+            """Convert an inline image in a run to a floating (anchored) image."""
+            drawing = run._r.find(qn('w:drawing'))
+            inline = drawing.find(qn('wp:inline'))
             
-        # Add Header Text
-        cell_right = header_table.cell(0, 1)
-        p_text = cell_right.paragraphs[0]
-        p_text.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run1 = p_text.add_run("Book Dispatch Format - I\n")
-        run1.bold = True
-        run2 = p_text.add_run("VISVESVARAYA TECHNOLOGICAL UNIVERSITY, BELGAUM\nBELGAUM REGION\nB.E- V Semester Examination JUNE/JULY-2026")
-        run2.bold = True
+            # Create anchor element
+            anchor = OxmlElement('wp:anchor')
+            anchor.set('distT', '0')
+            anchor.set('distB', '0')
+            anchor.set('distL', '114300')
+            anchor.set('distR', '114300')
+            anchor.set('simplePos', '0')
+            anchor.set('relativeHeight', '251658240')
+            anchor.set('behindDoc', '0')
+            anchor.set('locked', '0')
+            anchor.set('layoutInCell', '1')
+            anchor.set('allowOverlap', '1')
+            
+            simplePos = OxmlElement('wp:simplePos')
+            simplePos.set('x', '0')
+            simplePos.set('y', '0')
+            anchor.append(simplePos)
+            
+            # Horizontal position relative to column
+            posH = OxmlElement('wp:positionH')
+            posH.set('relativeFrom', 'column')
+            posOffset_h = OxmlElement('wp:posOffset')
+            posOffset_h.text = str(left_emu)
+            posH.append(posOffset_h)
+            anchor.append(posH)
+            
+            # Vertical position relative to paragraph
+            posV = OxmlElement('wp:positionV')
+            posV.set('relativeFrom', 'paragraph')
+            posOffset_v = OxmlElement('wp:posOffset')
+            posOffset_v.text = str(top_emu)
+            posV.append(posOffset_v)
+            anchor.append(posV)
+            
+            # Move all children from inline to anchor
+            for child in list(inline):
+                anchor.append(child)
+            
+            # Add wrap none so text flows freely
+            wrapNone = OxmlElement('wp:wrapNone')
+            anchor.insert(4, wrapNone)
+            
+            # Replace inline with anchor
+            drawing.remove(inline)
+            drawing.append(anchor)
         
-        doc.add_paragraph() # Spacing
+        # Add floating logo on the first header paragraph
+        p_title = doc.add_paragraph()
+        p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # Insert logo as floating image
+        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vtu_logo.png')
+        if os.path.exists(logo_path):
+            run_logo = p_title.add_run()
+            run_logo.add_picture(logo_path, width=Inches(0.85))
+            # Position: 0 EMU from left column, 0 EMU from top of paragraph
+            make_image_float(run_logo, 0, 0)
+        
+        # Header text as free centered runs on the same paragraph
+        run_title = p_title.add_run("Book Dispatch Format – I\n")
+        run_title.bold = True
+        run_title.font.size = Pt(14)
+        
+        run_univ = p_title.add_run("VISVESVARAYA TECHNOLOGICAL UNIVERSITY, BELGAUM\n")
+        run_univ.bold = True
+        run_univ.font.size = Pt(14)
+        
+        run_region = p_title.add_run("BELGAUM REGION\n")
+        run_region.bold = True
+        run_region.font.size = Pt(14)
+        
+        run_sem = p_title.add_run("B.E- V Semester Examination JUNE/JULY-2026")
+        run_sem.bold = True
+        run_sem.font.size = Pt(14)
         
         # Extract branch from USN
         usn = str(group['USN'].iloc[0]).upper()
-        # Typical format 2GI21EC001 -> matches 'EC'
         m = re.search(r'\d[A-Z]{2}\d{2}([A-Z]{2,3})', usn)
         if m:
             enclosure = m.group(1)
         else:
             m2 = re.search(r'[A-Za-z]+', str(subject_code))
             enclosure = m2.group(0) if m2 else "ALL"
-            
-        doc.add_paragraph("Exam Centre: - V.S.M's S.R.K Institute of Technology, Nipani")
-        doc.add_paragraph(f"Enclosures: - {enclosure}\nAnswer Script Details:-")
         
+        # Exam Centre line
+        p_centre = doc.add_paragraph()
+        run_ec = p_centre.add_run("Exam Centre: - V.S.M's S.R.K Institute of Technology, Nipani")
+        run_ec.bold = True
+        run_ec.font.size = Pt(11)
+        
+        # Enclosures line
+        p_enc = doc.add_paragraph()
+        run_enc = p_enc.add_run(f"Enclosures: - {enclosure}")
+        run_enc.bold = True
+        run_enc.font.size = Pt(11)
+        
+        p_asd = doc.add_paragraph()
+        run_asd = p_asd.add_run("Answer Script Details:-")
+        run_asd.bold = True
+        run_asd.font.size = Pt(11)
+        
+        # Data table - centered, compact, fixed layout
+        from docx.enum.table import WD_TABLE_ALIGNMENT
+        from docx.shared import Cm
         table = doc.add_table(rows=1, cols=4)
         table.style = 'Table Grid'
+        table.alignment = WD_TABLE_ALIGNMENT.LEFT
+        disable_autofit(table)
+        
+        table.columns[0].width = Inches(2.0)
+        table.columns[1].width = Inches(2.8)
+        table.columns[2].width = Inches(2.0)
+        table.columns[3].width = Inches(1.7)
+        
         hdr_cells = table.rows[0].cells
         hdr_cells[0].text = 'Date of Exam'
         hdr_cells[1].text = 'Exam Timing'
@@ -330,6 +596,7 @@ def create_dispatch_format_i(data_dict, output_dir):
         for cell in hdr_cells:
             cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             cell.paragraphs[0].runs[0].bold = True
+            cell.paragraphs[0].runs[0].font.size = Pt(14)
         
         row_cells = table.add_row().cells
         row_cells[0].text = formatted_date
@@ -337,13 +604,49 @@ def create_dispatch_format_i(data_dict, output_dir):
         row_cells[2].text = str(subject_code)
         row_cells[3].text = f"{enclosure}-{len(group):02d}"
         
+        # Set data row height and bold large font, vertically center
+        table.rows[1].height = Cm(1.5)
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
         for cell in row_cells:
             cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
             cell.paragraphs[0].runs[0].bold = True
+            cell.paragraphs[0].runs[0].font.size = Pt(14)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
         
-        doc.add_paragraph("\n2. Form -A   \u2714    \t\t3. Form- B   \u2714  \t\t4. Question Paper   \u2714\n")
+        # Forms check line
+        p_forms = doc.add_paragraph()
+        p_forms.add_run("\n")
+        run_f = p_forms.add_run("2. Form –A   \u2714    \t\t3. Form- B   \u2714  \t\t4. Question Paper   \u2714")
+        run_f.font.size = Pt(10)
         
-        doc.add_paragraph("To,\n       Dr. Sattagouda M Patil \n       Chief Co-ordinator \n       VTU, Digitization Centre  \"Jnana Sangama\"\n       VTU, Belagavi : 590018\n\nFrom,\n       Chief Superintendent\n")
+        doc.add_paragraph()
+        
+        # To section
+        p_to = doc.add_paragraph()
+        p_to.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_to1 = p_to.add_run("To,\n")
+        run_to1.bold = True
+        run_to1.font.size = Pt(12)
+        run_to2 = p_to.add_run("Dr. Sattagouda M Patil\n")
+        run_to2.bold = True
+        run_to2.font.size = Pt(12)
+        run_to3 = p_to.add_run("Chief Co-ordinator\n")
+        run_to3.bold = True
+        run_to3.font.size = Pt(12)
+        run_to4 = p_to.add_run('VTU, Digitization Centre  "Jnana Sangama"\n')
+        run_to4.bold = True
+        run_to4.font.size = Pt(12)
+        run_to5 = p_to.add_run("VTU, Belagavi : 590018")
+        run_to5.bold = True
+        run_to5.font.size = Pt(12)
+        
+        # From section
+        p_from = doc.add_paragraph()
+        run_from1 = p_from.add_run("From,\n")
+        run_from1.bold = True
+        run_from1.font.size = Pt(12)
+        run_from2 = p_from.add_run("       Chief Superintendent")
+        run_from2.font.size = Pt(11)
         
         doc.add_page_break()
         
@@ -356,76 +659,235 @@ def create_dispatch_format_ii(data_dict, output_dir):
     date = data_dict['date']
     session = data_dict['session']
     
+    from docx.shared import Inches, Pt, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    import re
+    
+    # Format date
+    date_parts = date.split('-')
+    if len(date_parts) == 3:
+        formatted_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+    else:
+        formatted_date = date
+    
     session_str = "MOR" if ("09:" in session or "10:" in session or "11:" in session or "AM" in session.upper()) else "AFT"
-    date_exam_str = f"{date}\n{session_str}"
+    
+    def make_image_float(run, left_emu, top_emu):
+        """Convert an inline image in a run to a floating (anchored) image."""
+        drawing = run._r.find(qn('w:drawing'))
+        inline = drawing.find(qn('wp:inline'))
+        
+        anchor = OxmlElement('wp:anchor')
+        anchor.set('distT', '0')
+        anchor.set('distB', '0')
+        anchor.set('distL', '114300')
+        anchor.set('distR', '114300')
+        anchor.set('simplePos', '0')
+        anchor.set('relativeHeight', '251658240')
+        anchor.set('behindDoc', '0')
+        anchor.set('locked', '0')
+        anchor.set('layoutInCell', '1')
+        anchor.set('allowOverlap', '1')
+        
+        simplePos = OxmlElement('wp:simplePos')
+        simplePos.set('x', '0')
+        simplePos.set('y', '0')
+        anchor.append(simplePos)
+        
+        posH = OxmlElement('wp:positionH')
+        posH.set('relativeFrom', 'column')
+        posOffset_h = OxmlElement('wp:posOffset')
+        posOffset_h.text = str(left_emu)
+        posH.append(posOffset_h)
+        anchor.append(posH)
+        
+        posV = OxmlElement('wp:positionV')
+        posV.set('relativeFrom', 'paragraph')
+        posOffset_v = OxmlElement('wp:posOffset')
+        posOffset_v.text = str(top_emu)
+        posV.append(posOffset_v)
+        anchor.append(posV)
+        
+        for child in list(inline):
+            anchor.append(child)
+        
+        wrapNone = OxmlElement('wp:wrapNone')
+        anchor.insert(4, wrapNone)
+        
+        drawing.remove(inline)
+        drawing.append(anchor)
+    
+    def disable_autofit(tbl):
+        tbl_el = tbl._tbl
+        tblPr = tbl_el.tblPr if tbl_el.tblPr is not None else OxmlElement('w:tblPr')
+        tblLayout = OxmlElement('w:tblLayout')
+        tblLayout.set(qn('w:type'), 'fixed')
+        tblPr.append(tblLayout)
     
     doc = docx.Document()
     
-    # Headers
-    p = doc.add_paragraph("Answer Book Dispatch Format - II\n")
-    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    run = p.add_run("Visvesvaraya Technological University, Belagavi\nBELAGAVI REGION\nANSWER BOOK BUNDLES ACKNOWLEDGEMENT\nJUNE/JULY-2026 Examinations\n")
-    run.bold = True
+    # Set narrow margins
+    section = doc.sections[-1]
+    section.top_margin = Inches(0.5)
+    section.bottom_margin = Inches(0.5)
+    section.left_margin = Inches(0.5)
+    section.right_margin = Inches(0.5)
     
-    p2 = doc.add_paragraph(f"                       Date: {date}\n")
-    p2.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    # Header with floating logo
+    p_title = doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     
-    doc.add_paragraph("Exam Centre: VSM INSTITUTE OF TECHNOLOGY, NIPANI.\n")
-    doc.add_paragraph("Valuation Centre: Prof. Sattagouda M Patil ,Chief Co-ordinator, VTU, Digitization Centre \"Jnana Sangama\" VTU, Belagavi-18\n")
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'vtu_logo.png')
+    if os.path.exists(logo_path):
+        run_logo = p_title.add_run()
+        run_logo.add_picture(logo_path, width=Inches(0.7))
+        make_image_float(run_logo, 0, 0)
     
+    r1 = p_title.add_run("Answer Book Dispatch Format – II\n")
+    r1.bold = True
+    r1.italic = True
+    r1.font.size = Pt(11)
+    
+    r2 = p_title.add_run("Visvesvaraya Technological University, Belagavi\n")
+    r2.bold = True
+    r2.font.size = Pt(13)
+    
+    r3 = p_title.add_run("BELAGAVI REGION\n")
+    r3.bold = True
+    r3.font.size = Pt(9)
+    
+    r4 = p_title.add_run("ANSWER BOOK BUNDLES ACKNOWLEDGEMENT\n")
+    r4.bold = True
+    r4.font.size = Pt(9)
+    
+    r5 = p_title.add_run("JUNE/JULY-2026 Examinations")
+    r5.bold = True
+    r5.font.size = Pt(9)
+    
+    # Date line - right aligned
+    p_date = doc.add_paragraph()
+    p_date.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    run_date = p_date.add_run(f"Date: {formatted_date}")
+    run_date.font.size = Pt(9)
+    
+    # Exam Centre
+    p_ec = doc.add_paragraph()
+    run_ec = p_ec.add_run("Exam Centre: VSM INSTITUTE OF TECHNOLOGY, NIPANI.")
+    run_ec.font.size = Pt(9)
+    
+    # Valuation Centre
+    p_vc = doc.add_paragraph()
+    run_vc = p_vc.add_run('Valuation Centre: Prof. Sattagouda M Patil ,Chief Co-ordinator, VTU, Digitization Centre "Jnana Sangama" VTU, Belagavi-18')
+    run_vc.font.size = Pt(9)
+    
+    # Data table
     table = doc.add_table(rows=1, cols=6)
     table.style = 'Table Grid'
+    disable_autofit(table)
+    
+    table.columns[0].width = Cm(1.0)
+    table.columns[1].width = Cm(2.2)
+    table.columns[2].width = Cm(2.2)
+    table.columns[3].width = Cm(8.0)
+    table.columns[4].width = Cm(2.2)
+    table.columns[5].width = Cm(2.2)
+    
     hdr_cells = table.rows[0].cells
-    hdr_cells[0].text = 'Sl. No.'
-    hdr_cells[1].text = 'Date of Exam'
-    hdr_cells[2].text = 'Subject Code'
+    hdr_cells[0].text = 'Sl.\nNo.'
+    hdr_cells[1].text = 'Date of\nExam'
+    hdr_cells[2].text = 'Subject\nCode'
     hdr_cells[3].text = 'Subject Title'
-    hdr_cells[4].text = 'No. of Ans. Scripts'
-    hdr_cells[5].text = 'No. of Bundles'
+    hdr_cells[4].text = 'No. of\nAns.\nScripts'
+    hdr_cells[5].text = 'No. of\nBundles'
+    
+    for cell in hdr_cells:
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in cell.paragraphs[0].runs:
+            run.bold = True
+            run.font.size = Pt(9)
+        cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     
     sl_no = 1
-    total_scripts = 0
     total_bundles = 0
-    
-    import re
     
     for subject_code, group in df.groupby('Subject Code'):
         subject_name = group['Subject Name'].iloc[0]
         scripts_count = len(group)
-        bundles_count = (scripts_count // 20) + 1 # Assuming 20 scripts per bundle
+        bundles_count = (scripts_count // 20) + 1
         
-        m = re.search(r'[A-Za-z]+', str(subject_code))
-        enclosure = m.group(0) if m else "ALL"
+        # Extract branch from USN
+        usn = str(group['USN'].iloc[0]).upper()
+        m = re.search(r'\d[A-Z]{2}\d{2}([A-Z]{2,3})', usn)
+        if m:
+            enclosure = m.group(1)
+        else:
+            m2 = re.search(r'[A-Za-z]+', str(subject_code))
+            enclosure = m2.group(0) if m2 else "ALL"
         
         row_cells = table.add_row().cells
         row_cells[0].text = f"{sl_no:02d}"
-        row_cells[1].text = date_exam_str
+        
+        # We will merge the Date of Exam cell later, but populate it first
+        row_cells[1].text = f"{formatted_date}\n{session_str}"
         row_cells[2].text = str(subject_code)
         row_cells[3].text = str(subject_name)
         row_cells[4].text = f"{enclosure}-{scripts_count:02d}"
         row_cells[5].text = f"{bundles_count:02d}"
         
-        total_scripts += scripts_count
+        for cell in row_cells:
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for run in cell.paragraphs[0].runs:
+                run.font.size = Pt(9)
+        row_cells[3].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+        
         total_bundles += bundles_count
         sl_no += 1
-        
-    row_cells = table.add_row().cells
-    row_cells[0].text = 'TOTAL'
-    row_cells[5].text = f"{total_bundles:02d}"
     
-    # Merge Date of Exam cells if there are multiple subjects
-    if len(table.rows) > 2:
+    # Merge 'Date of Exam' cells (Column 1) for all data rows
+    if len(table.rows) > 1:
         start_cell = table.cell(1, 1)
-        end_cell = table.cell(len(table.rows) - 2, 1)
-        start_cell.merge(end_cell)
-        start_cell.text = date_exam_str
-        start_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        
-    # Set alignment for cells
+        end_cell = table.cell(len(table.rows) - 1, 1)
+        if start_cell != end_cell:
+            start_cell.merge(end_cell)
+            start_cell.text = f"{formatted_date}\n{session_str}"
+            start_cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            for run in start_cell.paragraphs[0].runs:
+                run.font.size = Pt(9)
+    
+    # Add TOTAL row
+    row_cells = table.add_row().cells
+    cell_start = row_cells[0]
+    cell_end = row_cells[4]
+    cell_start.merge(cell_end)
+    cell_start.text = "TOTAL"
+    p = cell_start.paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p.runs[0]
+    r.bold = True
+    r.font.size = Pt(10)
+    
+    row_cells[5].text = f"{total_bundles:02d}"
+    p = row_cells[5].paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p.runs[0]
+    r.bold = True
+    r.font.size = Pt(10)
+    
+    # Force widths on all cells to prevent cutting
+    widths = [Inches(0.4), Inches(0.8), Inches(0.8), Inches(3.5), Inches(0.8), Inches(0.8)]
+    for row in table.rows:
+        # Check if row has 6 cells (not the merged TOTAL row)
+        if len(row.cells) == 6:
+            for i, cell in enumerate(row.cells):
+                cell.width = widths[i]
+    
+    # Set alignment for all cells
     for row in table.rows:
         for cell in row.cells:
-            for p in cell.paragraphs:
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
     
     # Helper to convert numbers to words
     def num2words(n):
@@ -438,9 +900,23 @@ def create_dispatch_format_ii(data_dict, output_dir):
             return words[tens*10] + (" " + words[units] if units else "")
         return str(n)
         
-    doc.add_paragraph(f"\nReceived ({num2words(total_bundles)}) Sealed Answer book bundles.\n\n\n")
+    p_recv = doc.add_paragraph()
+    p_recv.add_run("\nReceived (")
+    r_num = p_recv.add_run(num2words(total_bundles))
+    r_num.bold = True
+    r_num.underline = True
+    p_recv.add_run(") Sealed Answer book bundles.\n\n\n")
     
-    doc.add_paragraph("Chief Superintendent \t\t\t\t\t\t Member, Collection Team\n(Signature with date & Seal) \t\t\t\t\t (Signature with date)")
+    # Signatures - use free text with tab stops for precise positioning
+    from docx.enum.text import WD_TAB_ALIGNMENT
+    p_sig = doc.add_paragraph()
+    tab_stops = p_sig.paragraph_format.tab_stops
+    # Add center-aligned tab stops for the left and right signature blocks
+    tab_stops.add_tab_stop(Inches(1.5), WD_TAB_ALIGNMENT.CENTER)
+    tab_stops.add_tab_stop(Inches(6.0), WD_TAB_ALIGNMENT.CENTER)
+    
+    p_sig.add_run("\tChief Superintendent\tMember, Collection Team\n")
+    p_sig.add_run("\t(Signature with date & Seal)\t(Signature with date)")
     
     output_path = os.path.join(output_dir, 'Dispatch_Format_II_Generated.docx')
     doc.save(output_path)
