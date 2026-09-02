@@ -252,15 +252,30 @@ def create_dispatch_format_i(data_dict, output_dir):
     from docx.shared import Inches, Pt
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.enum.section import WD_ORIENT
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
     import re
     
+    def set_page_borders(section):
+        sectPr = section._sectPr
+        pgBorders = OxmlElement('w:pgBorders')
+        pgBorders.set(qn('w:offsetFrom'), 'page')
+        for border_name in ['top', 'left', 'bottom', 'right']:
+            border = OxmlElement(f'w:{border_name}')
+            border.set(qn('w:val'), 'single')
+            border.set(qn('w:sz'), '24')
+            border.set(qn('w:space'), '24')
+            border.set(qn('w:color'), 'auto')
+            pgBorders.append(border)
+        sectPr.append(pgBorders)
+
     doc = docx.Document()
     
     for subject_code, group in df.groupby('Subject Code'):
-        # Set Landscape
         section = doc.sections[-1]
         section.orientation = WD_ORIENT.LANDSCAPE
         section.page_width, section.page_height = section.page_height, section.page_width
+        set_page_borders(section)
         
         # We need a table to place logo on the left and text in the center
         header_table = doc.add_table(rows=1, cols=2)
