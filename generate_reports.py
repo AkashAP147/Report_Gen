@@ -236,23 +236,68 @@ def create_dispatch_format_i(data_dict, output_dir):
     date = data_dict['date']
     session = data_dict['session']
     
+    # Format Date
+    date_parts = date.split('-')
+    if len(date_parts) == 3:
+        formatted_date = f"{date_parts[2]}.{date_parts[1]}.{date_parts[0]}"
+    else:
+        formatted_date = date
+        
+    # Format Time
+    if "09:" in session or "10:" in session or "11:" in session or "AM" in session.upper():
+        formatted_time = "09.30 AM TO 12.30 PM"
+    else:
+        formatted_time = "02.00 PM TO 05.00 PM"
+    
+    from docx.shared import Inches, Pt
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.enum.section import WD_ORIENT
+    import re
+    
     doc = docx.Document()
     
     for subject_code, group in df.groupby('Subject Code'):
-        p = doc.add_paragraph("Book Dispatch Format - I\n")
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        run = p.add_run("VISVESVARAYA TECHNOLOGICAL UNIVERSITY, BELGAUM\nBELGAUM REGION\nB.E- V Semester Examination JUNE/JULY-2026\n")
-        run.bold = True
+        # Set Landscape
+        section = doc.sections[-1]
+        section.orientation = WD_ORIENT.LANDSCAPE
+        section.page_width, section.page_height = section.page_height, section.page_width
         
-        doc.add_paragraph("Exam Centre: - V.S.M's S.R.K Institute of Technology, Nipani")
+        # We need a table to place logo on the left and text in the center
+        header_table = doc.add_table(rows=1, cols=2)
+        header_table.columns[0].width = Inches(1.5)
+        header_table.columns[1].width = Inches(7.5)
         
-        # Try to guess enclosure prefix from subject code, e.g., 21EC51 -> EC
-        enclosure = "ALL"
-        import re
-        m = re.search(r'[A-Za-z]+', str(subject_code))
-        if m:
-            enclosure = m.group(0)
+        # Add Logo
+        cell_left = header_table.cell(0, 0)
+        p_logo = cell_left.paragraphs[0]
+        p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        logo_path = r"d:\COMMERCIAL\DOC_COV\vtu_logo.png"
+        if os.path.exists(logo_path):
+            run_logo = p_logo.add_run()
+            run_logo.add_picture(logo_path, width=Inches(1.0))
             
+        # Add Header Text
+        cell_right = header_table.cell(0, 1)
+        p_text = cell_right.paragraphs[0]
+        p_text.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run1 = p_text.add_run("Book Dispatch Format - I\n")
+        run1.bold = True
+        run2 = p_text.add_run("VISVESVARAYA TECHNOLOGICAL UNIVERSITY, BELGAUM\nBELGAUM REGION\nB.E- V Semester Examination JUNE/JULY-2026")
+        run2.bold = True
+        
+        doc.add_paragraph() # Spacing
+        
+        # Extract branch from USN
+        usn = str(group['USN'].iloc[0]).upper()
+        # Typical format 2GI21EC001 -> matches 'EC'
+        m = re.search(r'\d[A-Z]{2}\d{2}([A-Z]{2,3})', usn)
+        if m:
+            enclosure = m.group(1)
+        else:
+            m2 = re.search(r'[A-Za-z]+', str(subject_code))
+            enclosure = m2.group(0) if m2 else "ALL"
+            
+        doc.add_paragraph("Exam Centre: - V.S.M's S.R.K Institute of Technology, Nipani")
         doc.add_paragraph(f"Enclosures: - {enclosure}\nAnswer Script Details:-")
         
         table = doc.add_table(rows=1, cols=4)
@@ -263,16 +308,23 @@ def create_dispatch_format_i(data_dict, output_dir):
         hdr_cells[2].text = 'Subject Code'
         hdr_cells[3].text = 'No. of Papers'
         
+        for cell in hdr_cells:
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell.paragraphs[0].runs[0].bold = True
+        
         row_cells = table.add_row().cells
-        row_cells[0].text = date
-        row_cells[1].text = session
+        row_cells[0].text = formatted_date
+        row_cells[1].text = formatted_time
         row_cells[2].text = str(subject_code)
-        # Using string length for now, if they want "EC-01" we can append it
         row_cells[3].text = f"{enclosure}-{len(group):02d}"
         
-        doc.add_paragraph("\n2. Form -A   \u2713    \t\t3. Form- B   \u2713  \t\t4. Question Paper   \u2713\n")
+        for cell in row_cells:
+            cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cell.paragraphs[0].runs[0].bold = True
         
-        doc.add_paragraph("To,\nDr. Sattagouda M Patil \nChief Co-ordinator \nVTU, Digitization Centre  \"Jnana Sangama\"\nVTU, Belagavi : 590018\n\nFrom,\n               Chief Superintendent\n")
+        doc.add_paragraph("\n2. Form -A   \u2714    \t\t3. Form- B   \u2714  \t\t4. Question Paper   \u2714\n")
+        
+        doc.add_paragraph("To,\n       Dr. Sattagouda M Patil \n       Chief Co-ordinator \n       VTU, Digitization Centre  \"Jnana Sangama\"\n       VTU, Belagavi : 590018\n\nFrom,\n       Chief Superintendent\n")
         
         doc.add_page_break()
         
