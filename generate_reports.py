@@ -271,16 +271,20 @@ def create_dispatch_format_i(data_dict, output_dir):
 
     doc = docx.Document()
     
+    # Set Landscape for the whole document ONCE
+    section = doc.sections[-1]
+    section.orientation = WD_ORIENT.LANDSCAPE
+    # Standard letter portrait is 8.5 x 11. Swap to 11 x 8.5
+    section.page_width = Inches(11.69) # A4 width in landscape
+    section.page_height = Inches(8.27) # A4 height in landscape
+    set_page_borders(section)
+    
     for subject_code, group in df.groupby('Subject Code'):
-        section = doc.sections[-1]
-        section.orientation = WD_ORIENT.LANDSCAPE
-        section.page_width, section.page_height = section.page_height, section.page_width
-        set_page_borders(section)
         
         # We need a table to place logo on the left and text in the center
         header_table = doc.add_table(rows=1, cols=2)
-        header_table.columns[0].width = Inches(1.5)
-        header_table.columns[1].width = Inches(7.5)
+        header_table.columns[0].width = Inches(2.0)
+        header_table.columns[1].width = Inches(7.0)
         
         # Add Logo
         cell_left = header_table.cell(0, 0)
