@@ -21,7 +21,9 @@ def extract_subjects(excel_file):
         return []
 
 def assign_blocks(df, max_per_block=32, pref_left=None, pref_right=None):
-    subject_students = {subj: group.to_dict('records') for subj, group in df.groupby('Subject Code')}
+    if 'Branch' not in df.columns:
+        df['Branch'] = 'ALL'
+    subject_students = {subj: group.to_dict('records') for subj, group in df.groupby(['Subject Code', 'Branch'])}
     arranged_students = []
     
     block_labels = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX']
@@ -33,8 +35,8 @@ def assign_blocks(df, max_per_block=32, pref_left=None, pref_right=None):
         # Pick largest subject to start the left side, prioritizing preferred subjects
         def get_sort_key(k):
             boost = 0
-            if pref_left and k == pref_left: boost = 1000000
-            elif pref_right and k == pref_right: boost = 500000
+            if pref_left and k[0] == pref_left: boost = 1000000
+            elif pref_right and k[0] == pref_right: boost = 500000
             return len(subject_students[k]) + boost
             
         sorted_subjs = sorted(subject_students.keys(), key=get_sort_key, reverse=True)
@@ -137,6 +139,17 @@ def parse_excel(filepath, pref_left=None, pref_right=None):
         # If headers are in row 0
         df_data.columns = df_data.iloc[0]
         df_data = df_data[1:].reset_index(drop=True)
+        
+    def extract_branch(usn):
+        m = re.search(r'\d[A-Z]{2}\d{2}([A-Z]{2,3})', str(usn).upper())
+        if m:
+            return m.group(1)
+        return "ALL"
+        
+    if 'USN' in df_data.columns:
+        df_data['Branch'] = df_data['USN'].apply(extract_branch)
+    else:
+        df_data['Branch'] = "ALL"
         
     df_data = assign_blocks(df_data, pref_left=pref_left, pref_right=pref_right)
         
@@ -369,6 +382,8 @@ def create_block_list(data_dict, output_dir):
             
         # Map USNs by desk
         desk_to_usn = {row['Desk No']: row['USN'] for _, row in group.iterrows()}
+        desk_to_subj = {row['Desk No']: row['Subject Code'] for _, row in group.iterrows()}
+        seen_subjects = set()
         
         for i in range(1, 17):
             row = table.rows[i]
@@ -376,10 +391,21 @@ def create_block_list(data_dict, output_dir):
             desk_right = i * 2
             
             if desk_left in desk_to_usn:
-                row.cells[0].text = str(desk_to_usn[desk_left])
+                usn_text = str(desk_to_usn[desk_left])
+                subj_code = str(desk_to_subj[desk_left])
+                if subj_code not in seen_subjects:
+                    usn_text += f"\n({subj_code})"
+                    seen_subjects.add(subj_code)
+                row.cells[0].text = usn_text
                 row.cells[0].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                
             if desk_right in desk_to_usn:
-                row.cells[2].text = str(desk_to_usn[desk_right])
+                usn_text = str(desk_to_usn[desk_right])
+                subj_code = str(desk_to_subj[desk_right])
+                if subj_code not in seen_subjects:
+                    usn_text += f"\n({subj_code})"
+                    seen_subjects.add(subj_code)
+                row.cells[2].text = usn_text
                 row.cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         
         # Set font size 16 and line spacing 1.5 for all cells in the table
@@ -444,7 +470,7 @@ def create_dispatch_format_i(data_dict, output_dir):
     section.page_height = Inches(8.27) # A4 height in landscape
     set_page_borders(section)
     
-    for subject_code, group in df.groupby('Subject Code'):
+    for (subject_code, branch), group in df.groupby(['Subject Code', 'Branch']):
         
         # Helper to remove all borders from a table (make it invisible)
         def remove_table_borders(tbl):
@@ -813,7 +839,7 @@ def create_dispatch_format_ii(data_dict, output_dir):
     sl_no = 1
     total_bundles = 0
     
-    for subject_code, group in df.groupby('Subject Code'):
+    for (subject_code, branch), group in df.groupby(['Subject Code', 'Branch']):
         subject_name = group['Subject Name'].iloc[0]
         scripts_count = len(group)
         bundles_count = (scripts_count // 20) + 1
@@ -968,46 +994,60 @@ def create_consolidated_list(data_dict, output_dir):
     widths = [Cm(1.5), Cm(2.0), Cm(2.8), Cm(9.5), Cm(1.7), Cm(1.5)]
     
     for block_no, block_group in df.groupby('Block No', sort=False):
-        start_row_idx = len(table.rows)
+        start_block_row_idx = len(table.rows)
         
-        for subject_code, group in block_group.groupby('Subject Code'):
-            subject_name = group['Subject Name'].iloc[0]
-            usns = group['USN'].tolist()
+        for subject_code, subject_group in block_group.groupby('Subject Code'):
+            start_subj_row_idx = len(table.rows)
             
-            # Group into chunks of 4 and join with newlines (NO SPACES AFTER COMMAS)
-            usns_chunks = [usns[i:i + 4] for i in range(0, len(usns), 4)]
-            usns_str = "\n".join([",".join(map(str, chunk)) for chunk in usns_chunks])
+            for branch, group in subject_group.groupby('Branch'):
+                subject_name = group['Subject Name'].iloc[0]
+                usns = group['USN'].tolist()
+                
+                # Group into chunks of 4 and join with newlines (NO SPACES AFTER COMMAS)
+                usns_chunks = [usns[i:i + 4] for i in range(0, len(usns), 4)]
+                usns_str = "\n".join([",".join(map(str, chunk)) for chunk in usns_chunks])
+                
+                row_cells = table.add_row().cells
+                row_cells[0].text = block_no
+                row_cells[0].paragraphs[0].runs[0].bold = True
+                
+                row_cells[1].text = str(subject_code)
+                row_cells[1].paragraphs[0].runs[0].bold = True
+                
+                row_cells[2].text = str(subject_name)
+                row_cells[2].paragraphs[0].runs[0].bold = True
+                
+                row_cells[3].text = usns_str
+                row_cells[4].text = f"{len(usns)}"
+                row_cells[5].text = ''
+                
+                # Set font size for all cells in this row to 10pt
+                for cell in row_cells:
+                    for p_cell in cell.paragraphs:
+                        for run_cell in p_cell.runs:
+                            run_cell.font.size = Pt(10)
+                            
+            # Merge Subject Code and Subject Name cells if multiple branches
+            end_subj_row_idx = len(table.rows) - 1
+            if end_subj_row_idx > start_subj_row_idx:
+                table.cell(start_subj_row_idx, 1).merge(table.cell(end_subj_row_idx, 1))
+                table.cell(start_subj_row_idx, 1).text = str(subject_code)
+                table.cell(start_subj_row_idx, 1).paragraphs[0].runs[0].bold = True
+                
+                table.cell(start_subj_row_idx, 2).merge(table.cell(end_subj_row_idx, 2))
+                table.cell(start_subj_row_idx, 2).text = str(subject_name)
+                table.cell(start_subj_row_idx, 2).paragraphs[0].runs[0].bold = True
             
-            row_cells = table.add_row().cells
-            row_cells[0].text = block_no
-            row_cells[0].paragraphs[0].runs[0].bold = True
-            
-            row_cells[1].text = str(subject_code)
-            row_cells[1].paragraphs[0].runs[0].bold = True
-            
-            row_cells[2].text = str(subject_name)
-            row_cells[2].paragraphs[0].runs[0].bold = True
-            
-            row_cells[3].text = usns_str
-            row_cells[4].text = f"{len(usns)}"
-            row_cells[5].text = ''
-            
-            # Set font size for all cells in this row to 10pt
-            for cell in row_cells:
-                for p_cell in cell.paragraphs:
-                    for run_cell in p_cell.runs:
-                        run_cell.font.size = Pt(10)
-            
-        # Merge block_no and invigilator sign cells if multiple subjects
-        end_row_idx = len(table.rows) - 1
-        if end_row_idx > start_row_idx:
+        # Merge block_no and invigilator sign cells if multiple subjects/branches
+        end_block_row_idx = len(table.rows) - 1
+        if end_block_row_idx > start_block_row_idx:
             # Merge Block No (col 0)
-            table.cell(start_row_idx, 0).merge(table.cell(end_row_idx, 0))
-            table.cell(start_row_idx, 0).text = block_no
-            table.cell(start_row_idx, 0).paragraphs[0].runs[0].bold = True
+            table.cell(start_block_row_idx, 0).merge(table.cell(end_block_row_idx, 0))
+            table.cell(start_block_row_idx, 0).text = block_no
+            table.cell(start_block_row_idx, 0).paragraphs[0].runs[0].bold = True
             
             # Merge Invigilator Sign (col 5)
-            table.cell(start_row_idx, 5).merge(table.cell(end_row_idx, 5))
+            table.cell(start_block_row_idx, 5).merge(table.cell(end_block_row_idx, 5))
             
     # Apply widths, alignments, and vertical centering
     for row in table.rows:
