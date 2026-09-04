@@ -53,12 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleFiles(files) {
         if (files.length === 0) return;
         
-        const file = files[0];
         const validTypes = ['.xls', '.xlsx', '.csv'];
-        const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+        let allValid = true;
         
-        if (!validTypes.includes(fileExt)) {
-            showError("Please upload a valid Excel or CSV file (.xls, .xlsx, .csv).");
+        Array.from(files).forEach(file => {
+            const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+            if (!validTypes.includes(fileExt)) {
+                allValid = false;
+            }
+        });
+        
+        if (!allValid) {
+            showError("Please upload valid Excel or CSV files (.xls, .xlsx, .csv).");
             return;
         }
 
@@ -68,7 +74,9 @@ document.addEventListener('DOMContentLoaded', () => {
         parseProgress.style.display = 'flex';
 
         const formData = new FormData();
-        formData.append('file', file);
+        Array.from(files).forEach(file => {
+            formData.append('file', file);
+        });
 
         try {
             const response = await fetch('/parse', {
@@ -82,7 +90,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Populate dropdowns
                 populateDropdowns(data.subjects);
-                fileName.textContent = file.name;
+                if (files.length > 1) {
+                    fileName.textContent = `${files.length} files selected`;
+                } else {
+                    fileName.textContent = files[0].name;
+                }
                 
                 // Transition to Step 2
                 step1.classList.remove('active');
@@ -130,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const payload = {
             session_id: currentSessionData.session_id,
-            filename: currentSessionData.filename,
+            filenames: currentSessionData.filenames,
             pref_left: prefLeft.value || null,
             pref_right: prefRight.value || null
         };

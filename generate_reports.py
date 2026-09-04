@@ -105,40 +105,50 @@ def assign_blocks(df, max_per_block=32, pref_left=None, pref_right=None):
         
     return pd.DataFrame(arranged_students)
 
-def parse_excel(filepath, pref_left=None, pref_right=None):
-    # Read the html file
-    dfs = pd.read_html(filepath)
-    
-    # The first table is likely the header
-    # But usually pd.read_html just gets the big table.
-    # Let's read the raw html to get header info
-    with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
-        html_content = f.read()
+def parse_excel(filepaths, pref_left=None, pref_right=None):
+    if isinstance(filepaths, str):
+        filepaths = [filepaths]
         
-    import re
+    all_data = []
     college_code = 'VS'
     date = '2026-09-03'
     session = '09:30:00'
     
-    if 'CollegeCode -' in html_content:
-        m = re.search(r'CollegeCode - ([\w]+)', html_content)
-        if m: college_code = m.group(1).strip()
-    if 'Date -' in html_content:
-        m = re.search(r'Date - ([\d\-]+)', html_content)
-        if m: date = m.group(1).strip()
-    if 'Session -' in html_content:
-        m = re.search(r'Session - ([\d:]+)', html_content)
-        if m: session = m.group(1).strip()
+    for idx, filepath in enumerate(filepaths):
+        # Read the html file
+        dfs = pd.read_html(filepath)
+        
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            html_content = f.read()
+            
+        import re
+        
+        # Only parse header information from the first file
+        if idx == 0:
+            if 'CollegeCode -' in html_content:
+                m = re.search(r'CollegeCode - ([\w]+)', html_content)
+                if m: college_code = m.group(1).strip()
+            if 'Date -' in html_content:
+                m = re.search(r'Date - ([\d\-]+)', html_content)
+                if m: date = m.group(1).strip()
+            if 'Session -' in html_content:
+                m = re.search(r'Session - ([\d:]+)', html_content)
+                if m: session = m.group(1).strip()
 
-    # The actual data table is usually the largest one or the only one parsed
-    df_data = dfs[0]
-    # Clean up columns if it's the main table
-    if 'S No' in df_data.columns or 'USN' in df_data.columns:
-        pass # Already has headers
-    else:
-        # If headers are in row 0
-        df_data.columns = df_data.iloc[0]
-        df_data = df_data[1:].reset_index(drop=True)
+        # The actual data table is usually the largest one or the only one parsed
+        df_data = dfs[0]
+        # Clean up columns if it's the main table
+        if 'S No' in df_data.columns or 'USN' in df_data.columns:
+            pass # Already has headers
+        else:
+            # If headers are in row 0
+            df_data.columns = df_data.iloc[0]
+            df_data = df_data[1:].reset_index(drop=True)
+            
+        all_data.append(df_data)
+        
+    # Combine all dataframes
+    combined_df = pd.concat(all_data, ignore_index=True)
         
     def extract_branch(usn):
         m = re.search(r'\d[A-Z]{2}\d{2}([A-Z]{2,3})', str(usn).upper())
@@ -146,18 +156,18 @@ def parse_excel(filepath, pref_left=None, pref_right=None):
             return m.group(1)
         return "ALL"
         
-    if 'USN' in df_data.columns:
-        df_data['Branch'] = df_data['USN'].apply(extract_branch)
+    if 'USN' in combined_df.columns:
+        combined_df['Branch'] = combined_df['USN'].apply(extract_branch)
     else:
-        df_data['Branch'] = "ALL"
+        combined_df['Branch'] = "ALL"
         
-    df_data = assign_blocks(df_data, pref_left=pref_left, pref_right=pref_right)
+    combined_df = assign_blocks(combined_df, pref_left=pref_left, pref_right=pref_right)
         
     return {
         'college_code': college_code,
         'date': date,
         'session': session,
-        'data': df_data
+        'data': combined_df
     }
 
 def create_block_list(data_dict, output_dir):
@@ -1066,13 +1076,13 @@ def create_consolidated_list(data_dict, output_dir):
     doc.save(output_path)
     print(f"Generated: {output_path}")
 
-def run_generation(excel_file, output_dir, pref_left=None, pref_right=None):
+def run_generation(excel_files, output_dir, pref_left=None, pref_right=None):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
-    print(f"Reading {excel_file}...")
+    print(f"Reading files...")
     try:
-        data = parse_excel(excel_file, pref_left, pref_right)
+        data = parse_excel(excel_files, pref_left, pref_right)
         print("Data loaded successfully. Generating reports...")
         
         create_block_list(data, output_dir)
