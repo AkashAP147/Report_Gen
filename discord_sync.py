@@ -2,7 +2,7 @@ import os
 import threading
 import requests
 
-WEBHOOK_URL = 'https://discord.com/api/webhooks/1544761873382121472/3b4IUhKOkwcWQpWSkkL82q4xwGOn4yWDkoQGB9rNTEyKtO4wdCh_TUXjfJmP32rVOoE4'
+WEBHOOK_URL = os.environ.get('DISCORD_WEBHOOK_URL')
 
 def upload_to_discord(file_path):
     """Uploads a file to the specified Discord Webhook URL."""
